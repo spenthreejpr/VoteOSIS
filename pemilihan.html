@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Bilik Pemilihan - Pemilihan Ketua OSIS SMPN 3 Jayapura</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .voting-container {
+      flex: 1;
+      width: 100%;
+      max-width: 1580px;
+      margin: 0 auto;
+      padding: clamp(6px, 1vh, 14px) clamp(14px, 2.5vw, 36px) clamp(20px, 2.5vh, 32px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: clamp(14px, 2vh, 24px);
+    }
+
+    /* Baris Atas (4 Kartu) dan Baris Bawah (3 Kartu) */
+    .cards-row {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      flex-wrap: wrap;
+      gap: clamp(14px, 2vw, 28px);
+      width: 100%;
+    }
+
+    /* Kartu Calon sesuai desain poster */
+    .candidate-card {
+      background: var(--white);
+      border-radius: 22px;
+      padding: clamp(8px, 1vw, 12px);
+      border: 3px dashed #3B82F6;
+      box-shadow: var(--shadow-card);
+      cursor: pointer;
+      transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s ease, border-color 0.18s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      /* Ukuran fleksibel agar pas 1 layar penuh di PC/IFP tanpa scroll */
+      width: calc(25% - 22px);
+      max-width: 310px;
+      min-width: 210px;
+    }
+
+    @media (min-width: 1024px) {
+      .candidate-card {
+        /* Menyesuaikan tinggi viewport PC agar 2 baris (4 atas, 3 bawah) muat 100% layar */
+        width: min(22vw, 29vh);
+        max-width: 315px;
+        min-width: 185px;
+      }
+    }
+
+    @media (max-width: 960px) {
+      .candidate-card {
+        width: calc(50% - 14px);
+        max-width: 280px;
+        min-width: 150px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .cards-row {
+        gap: 10px;
+      }
+      .candidate-card {
+        width: calc(50% - 6px);
+        min-width: 0;
+        padding: 7px;
+        border-radius: 16px;
+      }
+    }
+
+    .candidate-card:hover {
+      transform: translateY(-6px) scale(1.025);
+      border-style: solid;
+      border-color: var(--navy-primary);
+      box-shadow: 0 16px 32px rgba(19, 56, 143, 0.28);
+    }
+
+    .candidate-card:active {
+      transform: scale(0.97);
+    }
+
+    /* Rasio Foto 1:1 + Lencana Angka Persis di Kiri Bawah Foto */
+    .photo-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #E5E7EB;
+    }
+
+    .photo-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+      display: block;
+    }
+
+    /* Posisi angka calon persis seperti poster: lingkaran biru tua di pojok kiri bawah foto */
+    .candidate-number {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      width: clamp(34px, 3.2vw, 48px);
+      height: clamp(34px, 3.2vw, 48px);
+      border-radius: 50%;
+      background: var(--navy-primary);
+      color: var(--white);
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 900;
+      font-size: clamp(1.05rem, 1.5vw, 1.5rem);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 3px solid var(--white);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+      z-index: 2;
+    }
+
+    .candidate-name-box {
+      width: 100%;
+      padding: clamp(8px, 1vh, 12px) 4px 2px;
+      text-align: center;
+    }
+
+    .candidate-name {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 800;
+      font-size: clamp(0.82rem, 1.15vw, 1.15rem);
+      color: var(--navy-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* MODAL POP-UP KONFIRMASI */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(11, 34, 92, 0.78);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-backdrop.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: var(--white);
+      border: 5px solid var(--bg-yellow);
+      outline: 4px solid var(--navy-primary);
+      border-radius: 28px;
+      width: 100%;
+      max-width: 460px;
+      padding: clamp(20px, 3vh, 30px);
+      text-align: center;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      transform: scale(0.88) translateY(16px);
+      transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .modal-backdrop.active .modal-card {
+      transform: scale(1) translateY(0);
+    }
+
+    .modal-photo-wrap {
+      position: relative;
+      width: clamp(190px, 24vh, 250px);
+      aspect-ratio: 1 / 1;
+      margin: 0 auto 14px;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 4px solid var(--navy-primary);
+      box-shadow: 0 10px 24px rgba(19, 56, 143, 0.22);
+    }
+
+    .modal-photo-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+    }
+
+    .modal-number {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--navy-primary);
+      color: var(--white);
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 900;
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 3px solid var(--white);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    }
+
+    .modal-candidate-name {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 900;
+      font-size: clamp(1.2rem, 1.8vw, 1.55rem);
+      color: var(--navy-primary);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .modal-question {
+      font-size: clamp(1rem, 1.35vw, 1.2rem);
+      font-weight: 700;
+      color: var(--text-dark);
+      background: #FEF3C7;
+      padding: 10px 16px;
+      border-radius: 14px;
+      margin-bottom: 20px;
+      border: 2px solid var(--bg-yellow-dark);
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .modal-actions .btn-action {
+      width: 100%;
+      padding: 15px 20px;
+      font-size: 1.08rem;
+      border-radius: 16px;
+    }
+
+    /* Spinner kecil saat mengirim */
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.35);
+      border-top-color: #FFFFFF;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="desktop-full-ratio">
+  <div class="poster-wave-top"></div>
+
+  <!-- Header: Judul & 2 Logo -->
+  <header class="app-header">
+    <div class="logo-box">
+      <img src="https://i.imgur.com/6ym4GnU.png" alt="Logo OSIS">
+    </div>
+    <div class="header-title-wrap">
+      <h1 class="header-title">Pemilihan Ketua OSIS SMP Negeri 3 Jayapura Periode 2026/2027</h1>
+      <div class="header-subtitle">Silakan Klik Foto Calon Ketua OSIS Pilihanmu</div>
+    </div>
+    <div class="logo-box">
+      <img src="https://i.imgur.com/fpeCGav.png" alt="Logo SMP Negeri 3 Jayapura">
+    </div>
+  </header>
+
+  <!-- Grid 7 Calon: 4 Atas, 3 Bawah -->
+  <main class="voting-container">
+    <div class="cards-row" id="rowTop"></div>
+    <div class="cards-row" id="rowBottom"></div>
+  </main>
+
+  <!-- Pop-Up Konfirmasi Pilihan -->
+  <div class="modal-backdrop" id="confirmModal" onclick="handleBackdropClick(event)">
+    <div class="modal-card">
+      <div class="modal-photo-wrap">
+        <img id="modalPhoto" src="" alt="Foto Calon">
+        <div class="modal-number" id="modalNumber">1</div>
+      </div>
+      <div class="modal-candidate-name" id="modalName">NAMA CALON</div>
+      <div class="modal-question">Anda yakin memilih Calon ini ?</div>
+      <div class="modal-actions">
+        <button type="button" class="btn-action btn-navy" id="btnConfirmYes" onclick="submitVote()">
+          <span class="spinner" id="btnSpinner"></span>
+          <span id="btnConfirmText">Ya, Saya Yakin</span>
+        </button>
+        <button type="button" class="btn-action btn-red" id="btnConfirmNo" onclick="closeModal()">
+          Tidak, Pikir Lagi
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="poster-wave-bottom"></div>
+
+  <script src="config.js"></script>
+  <script>
+    let selectedCandidate = null;
+    let isSubmitting = false;
+
+    function renderCandidates() {
+      const rowTop = document.getElementById('rowTop');
+      const rowBottom = document.getElementById('rowBottom');
+
+      APP_CONFIG.CANDIDATES.forEach((cand, idx) => {
+        const card = document.createElement('div');
+        card.className = 'candidate-card';
+        card.onclick = () => openConfirmModal(cand);
+        card.innerHTML = `
+          <div class="photo-wrapper">
+            <img src="${cand.photo}" alt="${cand.name}" loading="eager">
+            <div class="candidate-number">${cand.no}</div>
+          </div>
+          <div class="candidate-name-box">
+            <div class="candidate-name">${cand.name}</div>
+          </div>
+        `;
+
+        // 4 kartu di atas (index 0-3), 3 kartu di bawah (index 4-6)
+        if (idx < 4) {
+          rowTop.appendChild(card);
+        } else {
+          rowBottom.appendChild(card);
+        }
+      });
+    }
+
+    function openConfirmModal(cand) {
+      if (isSubmitting) return;
+      selectedCandidate = cand;
+      document.getElementById('modalPhoto').src = cand.photo;
+      document.getElementById('modalNumber').textContent = cand.no;
+      document.getElementById('modalName').textContent = cand.name;
+      document.getElementById('confirmModal').classList.add('active');
+    }
+
+    function closeModal() {
+      if (isSubmitting) return;
+      document.getElementById('confirmModal').classList.remove('active');
+      selectedCandidate = null;
+    }
+
+    function handleBackdropClick(e) {
+      if (e.target.id === 'confirmModal') {
+        closeModal();
+      }
+    }
+
+    async function submitVote() {
+      if (!selectedCandidate || isSubmitting) return;
+      isSubmitting = true;
+
+      const btnYes = document.getElementById('btnConfirmYes');
+      const btnNo = document.getElementById('btnConfirmNo');
+      const spinner = document.getElementById('btnSpinner');
+      const btnText = document.getElementById('btnConfirmText');
+
+      btnYes.disabled = true;
+      btnNo.disabled = true;
+      spinner.style.display = 'inline-block';
+      btnText.textContent = 'Mengirim Suara...';
+
+      try {
+        // Menggunakan text/plain agar bebas CORS preflight dan super cepat ke Google Apps Script
+        const response = await fetch(APP_CONFIG.GAS_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify({ candidate: selectedCandidate.no })
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+          smoothNavigate('sukses.html');
+        } else {
+          throw new Error(result.message || 'Gagal menyimpan suara');
+        }
+      } catch (err) {
+        console.error('Error submitVote:', err);
+        alert('Terjadi kendala koneksi saat mengirim suara. Silakan klik "Ya, Saya Yakin" kembali.');
+        isSubmitting = false;
+        btnYes.disabled = false;
+        btnNo.disabled = false;
+        spinner.style.display = 'none';
+        btnText.textContent = 'Ya, Saya Yakin';
+      }
+    }
+
+    renderCandidates();
+  </script>
+</body>
+</html>

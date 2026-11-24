@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Live Vote Count - Pemilihan Ketua OSIS SMPN 3 Jayapura</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="style.css">
+  <!-- Chart.js & DataLabels Plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <style>
+    .live-status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+
+    .live-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--red-accent);
+      color: var(--white);
+      font-weight: 800;
+      font-size: clamp(0.78rem, 1vw, 0.98rem);
+      padding: 4px 16px;
+      border-radius: 999px;
+      border: 2px solid var(--white);
+      box-shadow: 0 3px 10px rgba(214, 40, 40, 0.25);
+    }
+
+    .live-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #4ADE80;
+      animation: pulseDot 1.3s infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.45); opacity: 0.55; }
+    }
+
+    .total-pill {
+      background: var(--navy-primary);
+      color: var(--white);
+      font-weight: 800;
+      font-size: clamp(0.82rem, 1.05vw, 1.05rem);
+      padding: 4px 18px;
+      border-radius: 999px;
+      border: 2px solid var(--white);
+    }
+
+    .btn-home-mini {
+      background: var(--white);
+      color: var(--navy-primary);
+      border: 2px solid var(--navy-primary);
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 4px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-home-mini:hover {
+      background: var(--navy-primary);
+      color: var(--white);
+    }
+
+    /* Main Grid untuk IFP / PC / Tablet / HP */
+    .live-dashboard-grid {
+      flex: 1;
+      width: 100%;
+      max-width: 1740px;
+      margin: 0 auto;
+      padding: clamp(8px, 1.5vh, 18px) clamp(14px, 2.5vw, 36px) clamp(22px, 2.5vh, 32px);
+      display: grid;
+      grid-template-columns: 1fr 1.25fr;
+      gap: clamp(16px, 2vw, 28px);
+      align-items: stretch;
+    }
+
+    @media (max-width: 1023px) {
+      .live-dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-panel {
+      background: rgba(255, 255, 255, 0.96);
+      border: 4px solid var(--navy-primary);
+      border-radius: 26px;
+      padding: clamp(16px, 2.2vh, 26px);
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 360px;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 3px solid var(--bg-yellow);
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+
+    .panel-title {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 900;
+      font-size: clamp(1rem, 1.45vw, 1.45rem);
+      color: var(--navy-primary);
+      text-transform: uppercase;
+    }
+
+    .panel-badge {
+      background: var(--bg-yellow);
+      color: var(--navy-dark);
+      font-weight: 800;
+      font-size: 0.82rem;
+      padding: 4px 12px;
+      border-radius: 999px;
+      border: 1.5px solid var(--navy-primary);
+    }
+
+    .canvas-holder {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      min-height: 270px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Strip Foto & Perolehan Tiap Calon di Bawah Grafik */
+    .candidates-strip {
+      width: 100%;
+      max-width: 1740px;
+      margin: 0 auto;
+      padding: 0 clamp(14px, 2.5vw, 36px) 24px;
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: clamp(8px, 1.1vw, 16px);
+    }
+
+    @media (max-width: 1100px) {
+      .candidates-strip {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .candidates-strip {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .mini-stat-card {
+      background: var(--white);
+      border: 3px solid var(--navy-primary);
+      border-radius: 18px;
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 6px 14px rgba(19, 56, 143, 0.14);
+    }
+
+    .mini-avatar {
+      position: relative;
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      overflow: hidden;
+      flex-shrink: 0;
+      border: 2px solid var(--navy-primary);
+    }
+
+    .mini-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+    }
+
+    .mini-no {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      background: var(--navy-primary);
+      color: var(--white);
+      font-size: 0.72rem;
+      font-weight: 900;
+      padding: 1px 6px;
+      border-top-right-radius: 8px;
+    }
+
+    .mini-info {
+      overflow: hidden;
+      flex: 1;
+    }
+
+    .mini-name {
+      font-weight: 800;
+      font-size: 0.78rem;
+      color: var(--navy-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mini-score {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 900;
+      font-size: 1.05rem;
+      color: var(--red-accent);
+      line-height: 1.15;
+    }
+
+    .mini-pct {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #4B5563;
+    }
+  </style>
+</head>
+<body class="desktop-full-ratio">
+  <div class="poster-wave-top"></div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="logo-box">
+      <img src="https://i.imgur.com/6ym4GnU.png" alt="Logo OSIS">
+    </div>
+    <div class="header-title-wrap">
+      <h1 class="header-title">Pemilihan Ketua OSIS SMP Negeri 3 Jayapura Periode 2026/2027</h1>
+      <div class="live-status-bar">
+        <span class="live-pill"><span class="live-dot"></span> LIVE VOTE COUNT</span>
+        <span class="total-pill">Total Suara Masuk: <span id="totalVotesDisplay">0</span></span>
+        <button type="button" class="btn-home-mini" onclick="smoothNavigate('index.html')">← Dashboard</button>
+      </div>
+    </div>
+    <div class="logo-box">
+      <img src="https://i.imgur.com/fpeCGav.png" alt="Logo SMP Negeri 3 Jayapura">
+    </div>
+  </header>
+
+  <!-- Area Grafik Lingkaran (%) & Grafik Batang (Angka) -->
+  <main class="live-dashboard-grid">
+    <!-- Grafik Lingkaran (Persentase) -->
+    <section class="chart-panel">
+      <div class="panel-header">
+        <h2 class="panel-title">Persentase Perolehan Suara</h2>
+        <span class="panel-badge">Grafik Lingkaran (%)</span>
+      </div>
+      <div class="canvas-holder">
+        <canvas id="pieChart"></canvas>
+      </div>
+    </section>
+
+    <!-- Grafik Batang (Angka) -->
+    <section class="chart-panel">
+      <div class="panel-header">
+        <h2 class="panel-title">Jumlah Suara Tiap Calon</h2>
+        <span class="panel-badge">Grafik Batang (Suara)</span>
+      </div>
+      <div class="canvas-holder">
+        <canvas id="barChart"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <!-- Ringkasan 7 Calon di Bawah -->
+  <section class="candidates-strip" id="candidatesStrip"></section>
+
+  <div class="poster-wave-bottom"></div>
+
+  <script src="config.js"></script>
+  <script>
+    Chart.register(ChartDataLabels);
+
+    const labels = APP_CONFIG.CANDIDATES.map(c => `${c.no}. ${c.name}`);
+    const shortLabels = APP_CONFIG.CANDIDATES.map(c => `No. ${c.no}`);
+    const colors = APP_CONFIG.CANDIDATES.map(c => c.color);
+    let currentCounts = [0, 0, 0, 0, 0, 0, 0];
+
+    // Render strip kartu ringkasan calon
+    function initStrip() {
+      const strip = document.getElementById('candidatesStrip');
+      APP_CONFIG.CANDIDATES.forEach((cand, idx) => {
+        const item = document.createElement('div');
+        item.className = 'mini-stat-card';
+        item.innerHTML = `
+          <div class="mini-avatar">
+            <img src="${cand.photo}" alt="${cand.name}">
+            <span class="mini-no">${cand.no}</span>
+          </div>
+          <div class="mini-info">
+            <div class="mini-name" title="${cand.name}">${cand.name}</div>
+            <div class="mini-score" id="score-${idx}">0 Suara</div>
+            <div class="mini-pct" id="pct-${idx}">0.0%</div>
+          </div>
+        `;
+        strip.appendChild(item);
+      });
+    }
+
+    // Inisialisasi Grafik Lingkaran (Persen)
+    const pieCtx = document.getElementById('pieChart').getContext('2d');
+    const pieChart = new Chart(pieCtx, {
+      type: 'pie',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: currentCounts,
+          backgroundColor: colors,
+          borderColor: '#FFFFFF',
+          borderWidth: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 450 },
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: {
+              font: { family: 'Poppins', weight: '700', size: 12 },
+              color: '#13388F',
+              padding: 12,
+              usePointStyle: true
+            }
+          },
+          datalabels: {
+            color: '#FFFFFF',
+            font: { family: 'Montserrat', weight: '900', size: 13 },
+            textStrokeColor: 'rgba(0,0,0,0.55)',
+            textStrokeWidth: 3,
+            formatter: (value, ctx) => {
+              const sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              if (!sum || value === 0) return '';
+              const pct = ((value / sum) * 100).toFixed(1);
+              return pct + '%';
+            }
+          }
+        }
+      }
+    });
+
+    // Inisialisasi Grafik Batang (Angka)
+    const barCtx = document.getElementById('barChart').getContext('2d');
+    const barChart = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Jumlah Suara',
+          data: currentCounts,
+          backgroundColor: colors,
+          borderColor: '#13388F',
+          borderWidth: 2,
+          borderRadius: 10,
+          barPercentage: 0.68
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 450 },
+        layout: {
+          padding: { top: 26 }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              precision: 0,
+              font: { family: 'Poppins', weight: '700', size: 12 },
+              color: '#13388F'
+            },
+            grid: { color: 'rgba(19, 56, 143, 0.1)' }
+          },
+          x: {
+            ticks: {
+              font: { family: 'Poppins', weight: '700', size: 11 },
+              color: '#13388F',
+              maxRotation: 25,
+              minRotation: 0
+            },
+            grid: { display: false }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            anchor: 'end',
+            align: 'end',
+            offset: 2,
+            color: '#13388F',
+            font: { family: 'Montserrat', weight: '900', size: 15 },
+            formatter: (value) => value
+          }
+        }
+      }
+    });
+
+    // Polling real-time ke Google Apps Script setiap 2.5 detik tanpa reload halaman
+    let isFetching = false;
+    async function fetchLiveVotes() {
+      if (isFetching) return;
+      isFetching = true;
+      try {
+        const res = await fetch(`${APP_CONFIG.GAS_URL}?action=getVotes&t=${Date.now()}`);
+        const data = await res.json();
+        if (data.status === 'success' && Array.isArray(data.counts)) {
+          currentCounts = data.counts;
+          const total = data.totalVotes || currentCounts.reduce((a, b) => a + b, 0);
+
+          document.getElementById('totalVotesDisplay').textContent = total.toLocaleString('id-ID');
+
+          // Update charts
+          pieChart.data.datasets[0].data = currentCounts;
+          pieChart.update('none');
+
+          barChart.data.datasets[0].data = currentCounts;
+          barChart.update();
+
+          // Update strip bawah
+          currentCounts.forEach((val, idx) => {
+            const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+            document.getElementById(`score-${idx}`).textContent = `${val} Suara`;
+            document.getElementById(`pct-${idx}`).textContent = `${pct}%`;
+          });
+        }
+      } catch (err) {
+        console.warn('Menunggu pembaruan data live:', err);
+      } finally {
+        isFetching = false;
+      }
+    }
+
+    initStrip();
+    fetchLiveVotes();
+    setInterval(fetchLiveVotes, 2500);
+  </script>
+</body>
+</html>
